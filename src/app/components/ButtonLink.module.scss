@@ -1,0 +1,12 @@
+.button {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+
+  :hover {
+    background-color: #2a2767;
+    cursor: pointer;
+  }
+}

@@ -1,0 +1,28 @@
+.topCanvas {
+  position: absolute;
+  top: 0;
+}
+
+.blue {
+  background-color: blue;
+  padding: 1rem;
+  font-weight: 700;
+}
+
+.green {
+  background-color: green;
+  padding: 1rem;
+  font-weight: 700;
+}
+
+.red {
+  background-color: red;
+  padding: 1rem;
+  font-weight: 700;
+}
+
+.row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}

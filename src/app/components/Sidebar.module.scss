@@ -1,0 +1,37 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #42192b;
+  padding: 0.5rem;
+  color: #fbfbfb;
+  margin-right: 1rem;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+}
+
+.item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  color: white;
+  width: 100%;
+  padding: 0.5rem 0rem;
+  text-decoration: none;
+  border-radius: 0.5rem;
+
+  :hover {
+    background-color: #672743;
+  }
+}
+
+.divider {
+  margin-bottom: 1rem;
+}
+
+.icon {
+  color: #d288a8;
+}
