@@ -42,10 +42,7 @@ export class GameMap {
     for (let y = 0; y < height; y++) {
       const row: Tile[] = [];
       for (let x = 0; x < width; x++) {
-        row.push({
-          id: reader.readByte(),
-          permissions: reader.readByte(),
-        });
+        row.push(new Tile(x, y, reader.readByte(), reader.readByte()));
       }
       tiles.push(row);
     }
@@ -64,5 +61,8 @@ export class GameMap {
   }
   setBackgroundTile(backgroundTile: number) {
     this.backgroundTile = backgroundTile;
+  }
+  getTile(x: number, y: number) {
+    return this.tiles[y][x];
   }
 }

@@ -21,8 +21,27 @@
   font-weight: 700;
 }
 
+.yellow {
+  background-color: yellow;
+  padding: 1rem;
+  font-weight: 700;
+}
+
 .row {
   display: flex;
   gap: 1rem;
   align-items: center;
+}
+
+.container {
+  display: flex;
+  width: 100%;
+}
+
+.leftCol {
+  width: 70%;
+}
+
+.rightCol {
+  width: 30%;
 }

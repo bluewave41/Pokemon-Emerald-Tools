@@ -6,6 +6,7 @@ interface CanvasOptions {
 }
 
 export class Canvas {
+  innerCanvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
   tileSize: number;
 
@@ -14,6 +15,7 @@ export class Canvas {
     if (!context) {
       throw Error("Couldn't create context for canvas.");
     }
+    this.innerCanvas = canvas;
     this.context = context;
     this.tileSize = 16 * GLOBALS.scale;
   }

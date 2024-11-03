@@ -6,38 +6,69 @@ import GLOBALS from "@/app/lib/globals";
 import axios from "axios";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { TilePanel } from "@/app/components/TilePanel";
 
 import styles from "./page.module.scss";
+import { isCanvas } from "@/app/utils/isCanvas";
+import { Tile } from "@/app/lib/Tile";
 
 const colorMap = {
   0: "blue",
   1: "red",
   2: "green",
+  3: "yellow",
 };
 
 export default function Map() {
   const [ready, setReady] = useState(false);
   const [activeColor, setActiveColor] = useState(0);
   const [isMouseDown, setIsMouseDown] = useState(false);
-  const [isSelectingBackgroundTile, setIsSelectingBackgroundTile] =
-    useState(false);
+  const [isSelectingBackgroundTile, setIsSelectingBackgroundTile] = useState({
+    selecting: false,
+    background: -1,
+  });
+  const [selectedTile, setSelectedTile] = useState<{
+    selecting: boolean;
+    tile: Tile | null;
+  }>({
+    selecting: false,
+    tile: null,
+  });
   const params = useParams();
   const mapRef = useRef<GameMap>();
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const gameCanvasRef = useRef<Canvas>();
-  const topCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const gameTopCanvasRef = useRef<Canvas>();
+
+  const canvasRef = useRef<HTMLCanvasElement | Canvas>();
+  const topCanvasRef = useRef<HTMLCanvasElement | Canvas>();
+
+  const getRefs = () => {
+    const map = mapRef.current;
+    const canvas = canvasRef.current;
+    const topCanvas = topCanvasRef.current;
+
+    // Are they initialized?
+    if (!map || !canvas || !topCanvas) {
+      throw new Error("Refs aren't initialized!");
+    }
+
+    if (!isCanvas(canvas) || !isCanvas(topCanvas)) {
+      throw new Error("Refs are wrong type!");
+    }
+
+    return { map, canvas, topCanvas };
+  };
 
   const draw = useCallback(() => {
-    gameCanvasRef.current?.reset();
-    gameTopCanvasRef.current?.reset();
-    mapRef.current?.drawMap();
+    const { map, canvas, topCanvas } = getRefs();
+
+    canvas.reset();
+    topCanvas.reset();
+    map.drawMap();
 
     //draw overlaid tiles
-    for (let y = 0; y < mapRef.current.height; y++) {
-      for (let x = 0; x < mapRef.current.width; x++) {
-        const tile = mapRef.current.tiles[y][x];
-        gameTopCanvasRef.current.drawRect(x, y, {
+    for (let y = 0; y < map.height; y++) {
+      for (let x = 0; x < map.width; x++) {
+        const tile = map.tiles[y][x];
+        canvas.drawRect(x, y, {
           color: colorMap[tile.permissions],
           opacity: 0.5,
         });
@@ -51,22 +82,27 @@ export default function Map() {
         return;
       }
       const result = await axios.post("/api/maps", { name: params.name });
-      gameCanvasRef.current = new Canvas(canvasRef.current);
-      gameTopCanvasRef.current = new Canvas(topCanvasRef.current);
+      canvasRef.current = new Canvas(canvasRef.current as HTMLCanvasElement);
+      topCanvasRef.current = new Canvas(
+        topCanvasRef.current as HTMLCanvasElement
+      );
 
       mapRef.current = await GameMap.loadMap(
         "littleroot/overworld",
         Buffer.from(result.data.map),
-        gameCanvasRef.current
+        canvasRef.current
       );
-      canvasRef.current.width =
+
+      const { canvas, topCanvas } = getRefs();
+
+      canvas.innerCanvas.width =
         mapRef.current.width * GLOBALS.tileSize * GLOBALS.scale;
-      canvasRef.current.height =
+      canvas.innerCanvas.height =
         mapRef.current.height * GLOBALS.tileSize * GLOBALS.scale;
 
-      topCanvasRef.current.width =
+      topCanvas.innerCanvas.width =
         mapRef.current.width * GLOBALS.tileSize * GLOBALS.scale;
-      topCanvasRef.current.height =
+      topCanvas.innerCanvas.height =
         mapRef.current.height * GLOBALS.tileSize * GLOBALS.scale;
       setReady(true);
     }
@@ -77,7 +113,8 @@ export default function Map() {
     if (!ready) {
       return;
     }
-    let animationFrameId;
+    let animationFrameId: number = 0;
+
     const render = () => {
       draw();
       animationFrameId = window.requestAnimationFrame(render);
@@ -93,24 +130,37 @@ export default function Map() {
     if (!isMouseDown) {
       return;
     }
-    var rect = topCanvasRef.current.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) / mapRef.current?.tileSize);
-    const y = Math.floor((e.clientY - rect.top) / mapRef.current?.tileSize);
-    mapRef.current.tiles[y][x].permissions = activeColor;
+
+    const { map, topCanvas } = getRefs();
+    const rect = topCanvas.innerCanvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / map.tileSize);
+    const y = Math.floor((e.clientY - rect.top) / map.tileSize);
+    map.tiles[y][x].permissions = activeColor;
   };
 
   const onMouseDown = (e) => {
-    const rect = topCanvasRef.current.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) / mapRef.current?.tileSize);
-    const y = Math.floor((e.clientY - rect.top) / mapRef.current?.tileSize);
-    if (isSelectingBackgroundTile) {
-      mapRef.current.backgroundTile = mapRef.current?.tiles[y][x].id;
-      document.getElementById("background").innerText =
-        mapRef.current.backgroundTile;
-      setIsSelectingBackgroundTile(false);
+    console.log(selectedTile);
+    const { map, topCanvas } = getRefs();
+
+    const rect = topCanvas.innerCanvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / map.tileSize);
+    const y = Math.floor((e.clientY - rect.top) / map.tileSize);
+    if (isSelectingBackgroundTile.selecting) {
+      map.backgroundTile = mapRef.current?.tiles[y][x].id;
+      document.getElementById("background").innerText = map.backgroundTile;
+      setIsSelectingBackgroundTile({
+        ...isSelectingBackgroundTile,
+        selecting: false,
+      });
+    } else if (selectedTile.selecting) {
+      console.log("ttt");
+      setSelectedTile({
+        selecting: false,
+        tile: map.getTile(x, y),
+      });
     } else {
       setIsMouseDown(true);
-      mapRef.current.tiles[y][x].permissions = activeColor;
+      map.tiles[y][x].permissions = activeColor;
     }
   };
 
@@ -129,35 +179,58 @@ export default function Map() {
   };
 
   return (
-    <div>
-      <h1>Map</h1>
-      <div style={{ position: "relative" }}>
-        <canvas ref={canvasRef} />
-        <canvas
-          ref={topCanvasRef}
-          className={styles.topCanvas}
-          onMouseMove={onMouseMove}
-          onMouseDown={onMouseDown}
-          onMouseUp={onMouseUp}
-        />
+    <div className={styles.container}>
+      <div className={styles.leftCol}>
+        <h1>Map</h1>
+        <div style={{ position: "relative" }}>
+          <canvas ref={canvasRef} />
+          <canvas
+            ref={topCanvasRef}
+            className={styles.topCanvas}
+            onMouseMove={onMouseMove}
+            onMouseDown={onMouseDown}
+            onMouseUp={onMouseUp}
+          />
+        </div>
+        <div className={styles.row}>
+          <button
+            onClick={() =>
+              setSelectedTile({
+                ...selectedTile,
+                selecting: true,
+              })
+            }
+          >
+            S
+          </button>
+          <button className={styles.blue} onClick={() => setActiveColor(0)}>
+            0
+          </button>
+          <button className={styles.red} onClick={() => setActiveColor(1)}>
+            1
+          </button>
+          <button className={styles.green} onClick={() => setActiveColor(2)}>
+            2
+          </button>
+          <button className={styles.yellow} onClick={() => setActiveColor(3)}>
+            3
+          </button>
+          <button
+            id="background"
+            onClick={() =>
+              setIsSelectingBackgroundTile({
+                ...isSelectingBackgroundTile,
+                selecting: true,
+              })
+            }
+          >
+            X
+          </button>
+          <button onClick={saveMap}>Save</button>
+        </div>
       </div>
-      <div className={styles.row}>
-        <button className={styles.blue} onClick={() => setActiveColor(0)}>
-          0
-        </button>
-        <button className={styles.red} onClick={() => setActiveColor(1)}>
-          1
-        </button>
-        <button className={styles.green} onClick={() => setActiveColor(2)}>
-          2
-        </button>
-        <button
-          id="background"
-          onClick={() => setIsSelectingBackgroundTile(true)}
-        >
-          X
-        </button>
-        <button onClick={saveMap}>Save</button>
+      <div className={styles.rightCol}>
+        <TilePanel selectedTile={selectedTile.tile} />
       </div>
     </div>
   );
